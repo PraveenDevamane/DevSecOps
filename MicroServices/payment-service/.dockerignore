@@ -1,0 +1,11 @@
+target/
+.git
+.gitignore
+README.md
+.DS_Store
+.classpath
+.factorypath
+.project
+.settings/
+bin/
+**/*.log
