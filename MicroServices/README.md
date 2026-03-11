@@ -26,9 +26,9 @@ zero-trust-cicd-microservices/
 **Responsibility**: Manage orders and coordinate with Payment Service
 
 **Endpoints**:
-- `POST /api/orders` - Create a new order
-- `GET /api/orders` - Retrieve all orders
-- `GET /api/orders/health` - Health check
+- `POST /orders` - Create a new order
+- `GET /orders` - Retrieve all orders
+- `GET /actuator/health` - Health check
 
 **Order Model**:
 ```json
@@ -44,9 +44,9 @@ zero-trust-cicd-microservices/
 **Responsibility**: Process payments with 80% success simulation
 
 **Endpoints**:
-- `POST /api/payments` - Process payment
-- `GET /api/payments` - Retrieve all payments
-- `GET /api/payments/health` - Health check
+- `POST /payments` - Process payment
+- `GET /payments` - Retrieve all payments
+- `GET /actuator/health` - Health check
 
 **Payment Model**:
 ```json
@@ -98,20 +98,20 @@ java -jar target/payment-service-1.0.0.jar
 
 ```bash
 # Order Service Health
-curl -X GET http://localhost:8080/api/orders/health
+curl -X GET http://localhost:8080/actuator/health
 
 # Payment Service Health
-curl -X GET http://localhost:8081/api/payments/health
+curl -X GET http://localhost:8081/actuator/health
 ```
 
 ### Create an Order
 
 ```bash
-curl -X POST http://localhost:8080/api/orders \
+curl -X POST http://localhost:8080/orders \
   -H "Content-Type: application/json" \
   -d '{
     "product": "Laptop",
-    "amount": 999.99
+    "amount": 999
   }'
 ```
 
@@ -120,7 +120,7 @@ curl -X POST http://localhost:8080/api/orders \
 {
   "orderId": "550e8400-e29b-41d4-a716-446655440000",
   "product": "Laptop",
-  "amount": 999.99,
+  "amount": 999,
   "status": "CONFIRMED"
 }
 ```
@@ -130,7 +130,7 @@ curl -X POST http://localhost:8080/api/orders \
 {
   "orderId": "550e8400-e29b-41d4-a716-446655440001",
   "product": "Laptop",
-  "amount": 999.99,
+  "amount": 999,
   "status": "FAILED"
 }
 ```
@@ -138,7 +138,7 @@ curl -X POST http://localhost:8080/api/orders \
 ### Get All Orders
 
 ```bash
-curl -X GET http://localhost:8080/api/orders
+curl -X GET http://localhost:8080/orders
 ```
 
 **Response**:
@@ -147,7 +147,7 @@ curl -X GET http://localhost:8080/api/orders
   {
     "orderId": "550e8400-e29b-41d4-a716-446655440000",
     "product": "Laptop",
-    "amount": 999.99,
+    "amount": 999,
     "status": "CONFIRMED"
   }
 ]
@@ -156,7 +156,7 @@ curl -X GET http://localhost:8080/api/orders
 ### Get All Payments
 
 ```bash
-curl -X GET http://localhost:8081/api/payments
+curl -X GET http://localhost:8081/payments
 ```
 
 **Response**:
@@ -165,10 +165,38 @@ curl -X GET http://localhost:8081/api/payments
   {
     "paymentId": "660e8400-e29b-41d4-a716-446655440001",
     "orderId": "550e8400-e29b-41d4-a716-446655440000",
-    "amount": 999.99,
+    "amount": 999,
     "status": "SUCCESS"
   }
 ]
+```
+
+## DevSecOps Security Features
+
+### GitLeaks Pre-commit Hook
+This project includes **GitLeaks** integration to detect hardcoded secrets before they're committed to the repository.
+
+**How it works**:
+- Every git commit is scanned for exposed secrets (API keys, AWS credentials, tokens, etc.)
+- If secrets are detected, the commit is **BLOCKED**
+- The `.pre-commit-config.yaml` file defines the GitLeaks rule
+
+**Verify it's working**:
+```bash
+# Try to commit a file with a fake secret
+git add .
+git commit -m "test"
+
+# Expected output if secret is found:
+# gitleaks...........................................FAILED
+# ❌ Commit BLOCKED - Contains hardcoded secrets!
+
+# Remove the secret and try again
+git commit -m "test"
+
+# Expected output:
+# gitleaks...........................................PASSED
+# ✅ Commit allowed
 ```
 
 ## Microservice Communication

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   order-service:
     build:
@@ -13,7 +11,8 @@ services:
     networks:
       - devsecops-network
     depends_on:
-      - payment-service
+      payment-service:
+        condition: service_healthy
 
   payment-service:
     build:
@@ -26,6 +25,12 @@ services:
       - SERVER_PORT=8081
     networks:
       - devsecops-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", 
+             "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   devsecops-network:
