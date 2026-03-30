@@ -1,0 +1,196 @@
+name: DevSecOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "*"]
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # JOB 1 — BUILD (Rahul)
+  # Compiles both Spring Boot services via Maven
+  # ─────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history needed for GitLeaks & SonarCloud
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-
+
+      - name: Build Order Service
+        run: |
+          cd MicroServices/order-service
+          mvn clean package -DskipTests
+
+      - name: Build Payment Service
+        run: |
+          cd MicroServices/payment-service
+          mvn clean package -DskipTests
+
+      # Share compiled JARs with the docker job
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            MicroServices/order-service/target/*.jar
+            MicroServices/payment-service/target/*.jar
+
+
+#   # ─────────────────────────────────────────────
+#   # JOB 2 — GITLEAKS SCAN (Praveen)
+#   # Detects secrets / API keys in all commits
+#   # ─────────────────────────────────────────────
+#   gitleaks:
+#     needs: build
+#     runs-on: ubuntu-latest
+#     steps:
+
+#       - name: Checkout Code
+#         uses: actions/checkout@v3
+#         with:
+#           fetch-depth: 0
+
+#       - name: Run GitLeaks
+#         uses: gitleaks/gitleaks-action@v2
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+#   # ─────────────────────────────────────────────
+#   # JOB 3 — SONARCLOUD SAST (Praveen)
+#   # Static analysis for code vulnerabilities
+#   # ─────────────────────────────────────────────
+#   sonarcloud:
+#     needs: build
+#     runs-on: ubuntu-latest
+#     steps:
+
+#       - name: Checkout Code
+#         uses: actions/checkout@v3
+#         with:
+#           fetch-depth: 0
+
+#       - name: Setup Java 17
+#         uses: actions/setup-java@v3
+#         with:
+#           distribution: 'temurin'
+#           java-version: '17'
+
+#       - name: Cache Maven Dependencies
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/.m2
+#           key: maven-${{ hashFiles('**/pom.xml') }}
+#           restore-keys: maven-
+
+#       - name: SonarCloud Scan — Order Service
+#         run: |
+#           cd MicroServices/order-service
+#           mvn verify sonar:sonar \
+#             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_ORDER }} \
+#             -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+#             -Dsonar.host.url=https://sonarcloud.io \
+#             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+#       - name: SonarCloud Scan — Payment Service
+#         run: |
+#           cd MicroServices/payment-service
+#           mvn verify sonar:sonar \
+#             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_PAYMENT }} \
+#             -Dsonar.organization=${{ secrets.SONAR_ORG }} \
+#             -Dsonar.host.url=https://sonarcloud.io \
+#             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+
+#   # ─────────────────────────────────────────────
+#   # JOB 4 — TRIVY FILESYSTEM SCAN (Praveen)
+#   # Scans source + dependencies for CVEs
+#   # ─────────────────────────────────────────────
+#   trivy-fs:
+#     needs: build
+#     runs-on: ubuntu-latest
+#     steps:
+
+#       - name: Checkout Code
+#         uses: actions/checkout@v3
+
+#       - name: Trivy Filesystem Scan
+#         uses: aquasecurity/trivy-action@master
+#         with:
+#           scan-type: 'fs'
+#           scan-ref: '.'
+#           severity: 'CRITICAL,HIGH'
+#           exit-code: '1'            # fails pipeline on critical CVEs
+
+
+  # ─────────────────────────────────────────────
+  # JOB 5 — DOCKER BUILD + IMAGE SCAN + PUSH
+  #          (Rahul builds/pushes · Praveen scans)
+  # Runs only after ALL three security jobs pass
+  # ─────────────────────────────────────────────
+  docker:
+    needs: [ build ]  #gitleaks, sonarcloud, trivy-fs
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Login to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | \
+          docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build Order Service Image
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/order-service:latest \
+            ./MicroServices/order-service
+
+      - name: Build Payment Service Image
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/payment-service:latest \
+            ./MicroServices/payment-service
+
+    #   # Praveen's Trivy image scans — block push if CRITICAL CVEs found
+    #   - name: Trivy Scan — Order Service Image
+    #     uses: aquasecurity/trivy-action@master
+    #     with:
+    #       image-ref: ${{ secrets.DOCKER_USERNAME }}/order-service:latest
+    #       severity: 'CRITICAL,HIGH'
+    #       exit-code: '1'
+
+    #   - name: Trivy Scan — Payment Service Image
+    #     uses: aquasecurity/trivy-action@master
+    #     with:
+    #       image-ref: ${{ secrets.DOCKER_USERNAME }}/payment-service:latest
+    #       severity: 'CRITICAL,HIGH'
+    #       exit-code: '1'
+
+      - name: Push Order Service Image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/order-service:latest
+
+      - name: Push Payment Service Image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/payment-service:latest
