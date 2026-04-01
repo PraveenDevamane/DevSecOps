@@ -5,8 +5,8 @@ REM ============================================
 
 setlocal enabledelayedexpansion
 
-set API_BASE_URL=http://localhost:8080/api
-set PAYMENT_API_BASE_URL=http://localhost:8081/api
+set API_BASE_URL=http://localhost:8080
+set PAYMENT_API_BASE_URL=http://localhost:8081
 
 echo.
 echo ========================================

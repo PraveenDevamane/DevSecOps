@@ -35,3 +35,4 @@ services:
 networks:
   devsecops-network:
     driver: bridge
+

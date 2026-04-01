@@ -4,18 +4,18 @@
 # DevSecOps Microservices - API Test Script
 # ============================================
 
-API_BASE_URL="http://localhost:8080/api"
-PAYMENT_API_BASE_URL="http://localhost:8081/api"
+API_BASE_URL="http://localhost:8080"
+PAYMENT_API_BASE_URL="http://localhost:8081"
 
 echo "========================================"
 echo "Testing Health Checks"
 echo "========================================"
 
 echo -e "\n1. Order Service Health Check:"
-curl -X GET $API_BASE_URL/orders/health
+curl -s -X GET http://localhost:8080/actuator/health
 
 echo -e "\n\n2. Payment Service Health Check:"
-curl -X GET $PAYMENT_API_BASE_URL/payments/health
+curl -s -X GET http://localhost:8081/actuator/health
 
 
 echo -e "\n\n========================================"
