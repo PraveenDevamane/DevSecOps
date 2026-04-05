@@ -103,12 +103,18 @@ jobs:
         run: |
           cd MicroServices/order-service
           mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_ORDER }} \
+            -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }} \
+            -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: SonarCloud Scan — Payment Service
         run: |
           cd MicroServices/payment-service
           mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_PAYMENT }} \
+            -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }} \
+            -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
 
