@@ -72,50 +72,44 @@ jobs:
 #           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-#   # ─────────────────────────────────────────────
-#   # JOB 3 — SONARCLOUD SAST (Praveen)
-#   # Static analysis for code vulnerabilities
-#   # ─────────────────────────────────────────────
-#   sonarcloud:
-#     needs: build
-#     runs-on: ubuntu-latest
-#     steps:
+  # ─────────────────────────────────────────────
+  # JOB 3 — SONARCLOUD SAST (Praveen)
+  # Static analysis for code vulnerabilities
+  # ─────────────────────────────────────────────
+  sonarcloud:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
 
-#       - name: Checkout Code
-#         uses: actions/checkout@v3
-#         with:
-#           fetch-depth: 0
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-#       - name: Setup Java 17
-#         uses: actions/setup-java@v3
-#         with:
-#           distribution: 'temurin'
-#           java-version: '17'
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-#       - name: Cache Maven Dependencies
-#         uses: actions/cache@v3
-#         with:
-#           path: ~/.m2
-#           key: maven-${{ hashFiles('**/pom.xml') }}
-#           restore-keys: maven-
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-
 
-#       - name: SonarCloud Scan — Order Service
-#         run: |
-#           cd MicroServices/order-service
-#           mvn verify sonar:sonar \
-#             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_ORDER }} \
-#             -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-#             -Dsonar.host.url=https://sonarcloud.io \
-#             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Scan — Order Service
+        run: |
+          cd MicroServices/order-service
+          mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
-#       - name: SonarCloud Scan — Payment Service
-#         run: |
-#           cd MicroServices/payment-service
-#           mvn verify sonar:sonar \
-#             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_PAYMENT }} \
-#             -Dsonar.organization=${{ secrets.SONAR_ORG }} \
-#             -Dsonar.host.url=https://sonarcloud.io \
-#             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Scan — Payment Service
+        run: |
+          cd MicroServices/payment-service
+          mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
 
 #   # ─────────────────────────────────────────────
@@ -145,7 +139,7 @@ jobs:
   # Runs only after ALL three security jobs pass
   # ─────────────────────────────────────────────
   docker:
-    needs: [ build ]  #gitleaks, sonarcloud, trivy-fs
+    needs: [ build, sonarcloud ]  #gitleaks, sonarcloud, trivy-fs
     runs-on: ubuntu-latest
     steps:
 
