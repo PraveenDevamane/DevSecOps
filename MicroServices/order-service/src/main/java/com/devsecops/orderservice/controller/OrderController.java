@@ -17,7 +17,7 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
     // Intentionally dummy test secret for CI validation (GitLeaks rule should catch this)
-private static final String DUMMY_API_KEY = "DUMMY_GITLEAKS_SHOULD_FAIL_2026_04_06";
+private static final String awsKey="AKIAIOSFODNN7EXAMPLE";
 
     @PostMapping
     public ResponseEntity<Order> createOrder(@RequestBody Map<String, Object> request) {
