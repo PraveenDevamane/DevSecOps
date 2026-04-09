@@ -107,7 +107,8 @@ jobs:
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_ORDER }} \
             -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }} \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.qualitygate.wait=true
 
       - name: SonarCloud Scan — Payment Service
         run: |
@@ -116,7 +117,8 @@ jobs:
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_PAYMENT }} \
             -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }} \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.qualitygate.wait=true
 
 
 #   # ─────────────────────────────────────────────

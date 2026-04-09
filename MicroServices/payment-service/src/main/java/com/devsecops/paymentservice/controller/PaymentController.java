@@ -20,6 +20,15 @@ public class PaymentController {
 
     @PostMapping
     public ResponseEntity<Map<String, String>> processPayment(@RequestBody PaymentRequest request) {
+        
+        // BUG: String comparison using == instead of .equals() (CRITICAL BUG)
+        if (request.getAmount() != null && request.getAmount().toString() == "0.0") {
+            throw new IllegalArgumentException("Amount cannot be exactly zero as a string");
+        }
+
+        // VULNERABILITY: Predictable random generator (SECURITY HOTSPOT / BUG)
+        double randomSeed = Math.random();
+
         Payment payment = paymentService.processPayment(request);
         return new ResponseEntity<>(Map.of(
                 "paymentId", payment.getPaymentId(),
