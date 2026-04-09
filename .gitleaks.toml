@@ -1,9 +1,9 @@
 title = "Aggressive secret detection rules (CI)"
 
-[allowlist]
-description = "No global allowlist; keep detection aggressive"
-paths = []
-regexes = []
+# [allowlist]
+# description = "No global allowlist; keep detection aggressive"
+# paths = []
+# regexes = []
 
 # -----------------------------
 # Private keys (PEM blocks)
