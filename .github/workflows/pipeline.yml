@@ -144,7 +144,7 @@ jobs:
       - name: Wait for Quality Gate — Order Service
         uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
         with:
-          scanMetadataReportFile: MicroServices/order-service/.scannerwork/report-task.txt
+          scanMetadataReportFile: MicroServices/order-service/target/sonar/report-task.txt
           pollingTimeoutSec: 300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -163,7 +163,7 @@ jobs:
       - name: Wait for Quality Gate — Payment Service
         uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
         with:
-          scanMetadataReportFile: MicroServices/payment-service/.scannerwork/report-task.txt
+          scanMetadataReportFile: MicroServices/payment-service/target/sonar/report-task.txt
           pollingTimeoutSec: 300
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
