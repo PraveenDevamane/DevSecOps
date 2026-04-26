@@ -80,6 +80,8 @@ jobs:
   sonarcloud:
     needs: build
     runs-on: ubuntu-latest
+    env:
+      SONAR_HOST_URL: https://sonarcloud.io
     steps:
 
       - name: Checkout Code
@@ -100,15 +102,53 @@ jobs:
           key: maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: maven-
 
+      - name: Validate SonarCloud secrets and access
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_ORG_KEY: ${{ secrets.SONAR_ORG_KEY }}
+          SONAR_PROJECT_KEY_ORDER: ${{ secrets.SONAR_PROJECT_KEY_ORDER }}
+          SONAR_PROJECT_KEY_PAYMENT: ${{ secrets.SONAR_PROJECT_KEY_PAYMENT }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in SONAR_TOKEN SONAR_ORG_KEY SONAR_PROJECT_KEY_ORDER SONAR_PROJECT_KEY_PAYMENT; do
+            if [ -z "${!secret_name}" ]; then
+              echo "❌ Missing or empty GitHub secret: $secret_name"
+              exit 1
+            fi
+          done
+
+          for project_key in "${SONAR_PROJECT_KEY_ORDER}" "${SONAR_PROJECT_KEY_PAYMENT}"; do
+            response=$(curl -sS -u "${SONAR_TOKEN}:" \
+              "${SONAR_HOST_URL}/api/projects/search?organization=${SONAR_ORG_KEY}&projects=${project_key}")
+
+            if ! echo "$response" | grep -q "\"key\":\"${project_key}\""; then
+              echo "❌ SonarCloud project key not found or token has no access: ${project_key}"
+              echo "   Check SONAR_ORG_KEY / SONAR_PROJECT_KEY_* and token permissions (Browse + Execute Analysis)."
+              exit 1
+            fi
+          done
+
+          echo "✅ SonarCloud access check passed for both projects."
+
       - name: SonarCloud Scan — Order Service
         run: |
           cd MicroServices/order-service
           mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_ORDER }} \
             -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.branch.name=main
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.branch.name=${GITHUB_REF_NAME}
+
+      - name: Wait for Quality Gate — Order Service
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: MicroServices/order-service/.scannerwork/report-task.txt
+          pollingTimeoutSec: 300
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
 
       - name: SonarCloud Scan — Payment Service
         run: |
@@ -116,9 +156,18 @@ jobs:
           mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
             -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY_PAYMENT }} \
             -Dsonar.organization=${{ secrets.SONAR_ORG_KEY }} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.branch.name=main
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.branch.name=${GITHUB_REF_NAME}
+
+      - name: Wait for Quality Gate — Payment Service
+        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+        with:
+          scanMetadataReportFile: MicroServices/payment-service/.scannerwork/report-task.txt
+          pollingTimeoutSec: 300
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ env.SONAR_HOST_URL }}
 
 
 #   # ─────────────────────────────────────────────
